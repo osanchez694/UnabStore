@@ -9,6 +9,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,7 +31,7 @@ import com.google.firebase.auth.auth
 @Preview
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(onClickLogout: () -> Unit ={}) {
     val auth = Firebase.auth
     val user = auth.currentUser
     Scaffold(
@@ -76,9 +78,22 @@ fun HomeScreen() {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text("HOME SCREEN", fontSize = 30.sp)
-                if (user !=null)
-                    Text(user.email?:"No hay Usuarios")
+                if (user != null) {
+                    Text(user.email ?: "No hay Usuarios")
+                } else {
+                    Text("No hay usuarios")
                 }
+                Button(onClick = {
+                    auth.signOut()
+                    onClickLogout()
+                },
+                    colors = ButtonDefaults.buttonColors(
+                        Color(0xFFFF9900)
+                    )
+                ){
+                    Text("Cerrar sesion")
+                }
+            }
         }
     }
 }
