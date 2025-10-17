@@ -1,5 +1,6 @@
 package me.oscarsanchez.unabstore
 
+import android.renderscript.ScriptGroup
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,12 +39,21 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 
 
 @Preview
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen() {
+fun LoginScreen(onClickRegister :()->Unit = {}) {
+
+    val auth = Firebase.auth
+
+    //Estados
+    var inputEmail by remember { mutableStateOf("") }
+    var inputPassword by remember { mutableStateOf("") }
+
     Scaffold { paddingValues ->
         Column(
             modifier = Modifier
@@ -70,8 +84,8 @@ fun LoginScreen() {
 
             // Campo de Correo Electrónico
             OutlinedTextField(
-                value = "", // Valor vacío (sin estado)
-                onValueChange = {},
+                value = inputEmail,
+                onValueChange = { inputEmail = it},
                 label = { Text("Correo Electrónico") },
                 leadingIcon = {
                     Icon(
@@ -90,8 +104,8 @@ fun LoginScreen() {
 
             // Campo de Contraseña
             OutlinedTextField(
-                value = "", // Valor vacío (sin estado)
-                onValueChange = {},
+                value = inputPassword,
+                onValueChange = {inputPassword = it},
                 label = { Text("Contraseña") },
                 leadingIcon = {
                     Icon(
@@ -111,11 +125,14 @@ fun LoginScreen() {
             )
             Spacer(modifier = Modifier.height(24.dp))
             // Botón de Iniciar Sesión
-            Button(
-                onClick = { },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
+            Button(onClick = {
+
+                auth.signInWithEmailAndPassword(inputEmail,inputPassword)
+
+
+
+
+            }, modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9900)) // Color morado
             ) {
