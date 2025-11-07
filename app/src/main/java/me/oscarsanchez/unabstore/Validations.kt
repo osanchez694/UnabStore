@@ -9,7 +9,7 @@ fun validateEmail(email:String): Pair<Boolean, String>{
         !Patterns.EMAIL_ADDRESS.matcher(email).matches() ->Pair(false, "El correo es invalido.")
         !email.endsWith("@test.com")-> Pair(false, "El email no es corporativo.")
         else ->{
-            Pair(true, "El email no es corporativo.")
+            Pair(true, "")
         }
     }
 
