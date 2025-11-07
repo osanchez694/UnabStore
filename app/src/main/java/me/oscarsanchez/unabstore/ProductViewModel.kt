@@ -40,6 +40,6 @@ class ProductViewModel : ViewModel() {
         db.collection("Producto").document(id)
             .delete()
             .addOnSuccessListener { onResult(true) }
-            .addOnFailureListener { onResult(false) }
+            .addOnFailureListener { onResult(false)}
     }
 }
