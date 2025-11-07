@@ -9,11 +9,11 @@ plugins {
 }
 
 android {
-    namespace = "me.miguelsolano.unabstore"
+    namespace = "me.oscarsanchez.unabstore"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "me.miguelsolano.unabstore"
+        applicationId = "me.oscarsanchez.unabstore"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
