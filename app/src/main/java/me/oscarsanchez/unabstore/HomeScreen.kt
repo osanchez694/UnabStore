@@ -1,246 +1,306 @@
 package me.oscarsanchez.unabstore
 
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material3.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MediumTopAppBar
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType // Importación estándar
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
-import kotlinx.coroutines.delay
-import java.util.UUID
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onClickLogout: () -> Unit = {},
-    // Inyección del ViewModel: Soluciona el error 'Unresolved reference'
     productViewModel: ProductViewModel = viewModel()
 ) {
     val auth = Firebase.auth
-    val user = auth.currentUser
+    val emailUsuario = auth.currentUser?.email ?: "Invitado"
 
-    // ESTADOS DEL UI
+    // UI state
     var showAddDialog by remember { mutableStateOf(false) }
     var productos by remember { mutableStateOf(emptyList<Producto>()) }
-    var mensaje by remember { mutableStateOf("") }
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
-    // Función para recargar la lista de productos
-    val loadProducts: () -> Unit = {
-        // Llama a la función del ViewModel para obtener los productos de Firestore
-        productViewModel.obtenerProductos { newProducts ->
-            productos = newProducts
+    // Colores base
+    val brand = Color(0xFFFF9900)
+
+    // Cargar productos
+    fun loadProducts() {
+        productViewModel.obtenerProductos { new ->
+            productos = new
         }
     }
 
-    // Cargar productos al inicio (y cada vez que el componente se monta)
-    LaunchedEffect(Unit) {
-        loadProducts()
-    }
+    LaunchedEffect(Unit) { loadProducts() }
 
     Scaffold(
         topBar = {
             MediumTopAppBar(
                 title = {
-                    Text(
-                        "Unab Shop",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 28.sp
-                    )
+                    Column {
+                        Text("UNAB Shop", fontWeight = FontWeight.Bold, fontSize = 22.sp, color = Color.White)
+                        Spacer(Modifier.height(6.dp))
+                        // chip con correo
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(Color.White.copy(alpha = 0.18f))
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Icon(Icons.Filled.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                emailUsuario,
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
                 },
                 actions = {
                     IconButton(onClick = { /* Notificaciones */ }) {
-                        Icon(Icons.Filled.Notifications, "Notificaciones")
+                        Icon(Icons.Filled.Notifications, contentDescription = "Notificaciones", tint = Color.White)
                     }
                     IconButton(onClick = { /* Carrito */ }) {
-                        Icon(Icons.Filled.ShoppingCart, "Carrito")
+                        Icon(Icons.Filled.ShoppingCart, contentDescription = "Carrito", tint = Color.White)
                     }
-                    IconButton(onClick = {
-                        auth.signOut()
-                        onClickLogout()
-                    }) {
-                        Icon(Icons.AutoMirrored.Filled.ExitToApp, "Cerrar sesión")
+                    FilledTonalButton(
+                        onClick = {
+                            auth.signOut()
+                            onClickLogout()
+                        },
+                        shape = RoundedCornerShape(50)
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Salir")
+                        Spacer(Modifier.width(8.dp))
+                        Text("Salir")
                     }
+                    Spacer(Modifier.width(8.dp))
                 },
                 colors = TopAppBarDefaults.mediumTopAppBarColors(
-                    containerColor = Color(0xFFFF9900),
-                    titleContentColor = Color.White,
-                    actionIconContentColor = Color.White
+                    containerColor = brand
                 )
             )
         },
+        snackbarHost = { SnackbarHost(hostState = snackbar) },
         floatingActionButton = {
-            FloatingActionButton(
+            ExtendedFloatingActionButton(
                 onClick = { showAddDialog = true },
-                containerColor = Color(0xFFFF9900),
-                contentColor = Color.White
-            ) {
-                Icon(Icons.Filled.Add, "Agregar producto")
-            }
+                icon = { Icon(Icons.Filled.Add, contentDescription = "Agregar") },
+                text = { Text("Agregar") },
+                containerColor = brand,
+                contentColor = Color.White,
+                shape = RoundedCornerShape(28.dp)
+            )
         }
-    ) { paddingValues ->
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFF5F5F5))
-                .padding(paddingValues)
+                .padding(padding)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            // Muestra el mensaje de éxito/error y lo oculta después de 3s
-            if (mensaje.isNotEmpty()) {
-                Text(
-                    text = mensaje,
-                    color = if (mensaje.contains("Error")) Color.Red else Color.Black,
-                    modifier = Modifier.padding(16.dp)
-                )
-                LaunchedEffect(mensaje) {
-                    if (mensaje.isNotBlank()) {
-                        delay(3000L)
-                        mensaje = ""
-                    }
-                }
-            }
-
             Text(
-                text = "Lista de Productos",
-                fontSize = 20.sp,
+                text = "Mis productos",
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
             )
 
             if (productos.isEmpty()) {
+                // Empty state
                 Column(
-                    modifier = Modifier.fillMaxSize().padding(top = 50.dp),
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("No hay productos disponibles. ¡Agrega uno!", color = Color.Gray)
+                    Box(
+                        modifier = Modifier
+                            .size(96.dp)
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(brand.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.ShoppingCart,
+                            contentDescription = null,
+                            tint = brand,
+                            modifier = Modifier.size(42.dp)
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Text("Aún no tienes productos", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(4.dp))
+                    Text("Toca en “Agregar” para crear el primero", color = Color.Gray)
+                    Spacer(Modifier.height(16.dp))
+                    OutlinedButton(onClick = { showAddDialog = true }, shape = RoundedCornerShape(12.dp)) {
+                        Icon(Icons.Filled.Add, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Agregar producto")
+                    }
                 }
             } else {
-                // LISTAR PRODUCTOS
-                ProductList(
-                    productos = productos,
-                    onDelete = { id ->
-                        productViewModel.eliminarProducto(id) { success ->
-                            if (success) {
-                                mensaje = "Producto eliminado correctamente."
-                                loadProducts() // Recargar la lista tras la eliminación
-                            } else {
-                                mensaje = "Error al eliminar el producto."
+                // Grid 2×
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(productos, key = { it.id ?: it.nombre }) { p ->
+                        ProductCard(
+                            producto = p,
+                            brand = brand,
+                            onDelete = {
+                                p.id?.let { id ->
+                                    productViewModel.eliminarProducto(id) { ok ->
+                                        if (ok) {
+                                            loadProducts()
+                                            scope.launch {
+                                                snackbar.showSnackbar("Producto eliminado")
+                                            }
+                                        } else {
+                                            scope.launch {
+                                                snackbar.showSnackbar("Error al eliminar")
+                                            }
+                                        }
+                                    }
+                                }
                             }
-                        }
+                        )
                     }
-                )
+                }
             }
         }
     }
 
-    // AGREGAR PRODUCTO (Diálogo)
     if (showAddDialog) {
         AddProductDialog(
             onDismiss = { showAddDialog = false },
-            onAdd = { producto ->
-                productViewModel.agregarProducto(producto) { success, msg ->
+            onAdd = { nuevo ->
+                productViewModel.agregarProducto(nuevo) { ok, msg ->
                     showAddDialog = false
-                    mensaje = msg
-                    if (success) {
-                        loadProducts() // Recargar la lista tras la adición
-                    }
+                    loadProducts()
+                    scope.launch { snackbar.showSnackbar(if (msg.isBlank()) (if (ok) "Producto guardado" else "Error al guardar") else msg) }
                 }
-            }
+            },
+            brand = brand
         )
     }
 }
 
-/**
- * Composable para mostrar la lista de productos (LazyColumn).
- */
+/* ---------- Tarjeta ----------- */
 @Composable
-fun ProductList(productos: List<Producto>, onDelete: (String) -> Unit) {
-    LazyColumn(
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(productos, key = { it.id ?: UUID.randomUUID().toString() }) { producto ->
-            ProductItem(producto = producto, onDelete = onDelete)
-        }
-    }
-}
-
-/**
- * Composable para cada item de producto en la lista.
- */
-@Composable
-fun ProductItem(producto: Producto, onDelete: (String) -> Unit) {
+private fun ProductCard(
+    producto: Producto,
+    brand: Color,
+    onDelete: () -> Unit
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = producto.nombre,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 18.sp,
-                    color = Color.Black
-                )
-                Text(
-                    text = producto.descripcion,
-                    fontSize = 14.sp,
-                    color = Color.Gray,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "$ ${String.format("%.2f", producto.precio)}",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 16.sp,
-                    color = Color(0xFF0077B6) // Azul corporativo
-                )
+        Column(Modifier.padding(12.dp)) {
+            // “avatar” del producto
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(brand.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Filled.ShoppingCart, contentDescription = null, tint = brand)
             }
-            // Botón/ícono para eliminar producto
-            IconButton(onClick = { producto.id?.let { onDelete(it) } }) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Eliminar",
-                    tint = Color.Red.copy(alpha = 0.8f),
-                    modifier = Modifier.size(24.dp)
-                )
+
+            Spacer(Modifier.height(10.dp))
+            Text(
+                producto.nombre.ifBlank { "Sin nombre" },
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                producto.descripcion.ifBlank { "Sin descripción" },
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "$${"%,.2f".format(producto.precio)}",
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = brand)
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onDelete,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Filled.Delete, contentDescription = null)
+                Spacer(Modifier.width(6.dp))
+                Text("Eliminar")
             }
         }
     }
 }
 
-/**
- * Diálogo Composable para agregar un nuevo producto.
- */
+/* ---------- Diálogo Agregar ----------- */
 @Composable
-fun AddProductDialog(onDismiss: () -> Unit, onAdd: (Producto) -> Unit) {
+fun AddProductDialog(
+    onDismiss: () -> Unit,
+    onAdd: (Producto) -> Unit,
+    brand: Color = Color(0xFFFF9900)
+) {
     var nombre by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
     var precioText by remember { mutableStateOf("") }
@@ -250,9 +310,9 @@ fun AddProductDialog(onDismiss: () -> Unit, onAdd: (Producto) -> Unit) {
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Add, contentDescription = "Agregar", tint = Color(0xFFFF9900))
+                Icon(Icons.Filled.Add, contentDescription = "Agregar", tint = brand)
                 Spacer(Modifier.width(8.dp))
-                Text("Agregar Nuevo Producto", fontWeight = FontWeight.Bold)
+                Text("Agregar producto", fontWeight = FontWeight.Bold)
             }
         },
         text = {
@@ -263,23 +323,21 @@ fun AddProductDialog(onDismiss: () -> Unit, onAdd: (Producto) -> Unit) {
                     label = { Text("Nombre") },
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = descripcion,
                     onValueChange = { descripcion = it },
                     label = { Text("Descripción") },
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = precioText,
-                    onValueChange = {
-                        // Permite solo números y un punto decimal
-                        precioText = it.filter { char -> char.isDigit() || char == '.' }
+                    onValueChange = { s ->
+                        precioText = s.filter { c -> c.isDigit() || c == '.' }
                     },
                     label = { Text("Precio") },
-                    // CAMBIO SOLICITADO: Usar KeyboardType.Number
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (errorMsg.isNotEmpty()) {
@@ -291,26 +349,23 @@ fun AddProductDialog(onDismiss: () -> Unit, onAdd: (Producto) -> Unit) {
             Button(
                 onClick = {
                     val precio = precioText.toDoubleOrNull()
-                    if (nombre.isBlank() || precio == null || precio <= 0) {
-                        errorMsg = "Verifique que todos los campos sean válidos (Nombre, Precio > 0)."
+                    if (nombre.isBlank() || precio == null || precio <= 0.0) {
+                        errorMsg = "Nombre y precio (> 0) son obligatorios."
                     } else {
-                        val newProduct = Producto(
-                            nombre = nombre.trim(),
-                            descripcion = descripcion.trim(),
-                            precio = precio
+                        onAdd(
+                            Producto(
+                                nombre = nombre.trim(),
+                                descripcion = descripcion.trim(),
+                                precio = precio
+                            )
                         )
-                        onAdd(newProduct)
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9900))
-            ) {
-                Text("Guardar")
-            }
+                colors = ButtonDefaults.buttonColors(containerColor = brand)
+            ) { Text("Guardar") }
         },
         dismissButton = {
-            OutlinedButton(onClick = onDismiss) {
-                Text("Cancelar")
-            }
+            OutlinedButton(onClick = onDismiss) { Text("Cancelar") }
         }
     )
 }
